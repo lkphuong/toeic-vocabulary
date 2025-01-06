@@ -2,52 +2,37 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"time"
+	"sync"
 
 	_ "github.com/joho/godotenv/autoload"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Service interface {
-	Health() map[string]string
-}
-
-type service struct {
-	db *mongo.Client
-}
-
 var (
-	host = os.Getenv("BLUEPRINT_DB_HOST")
-	port = os.Getenv("BLUEPRINT_DB_PORT")
-	//database = os.Getenv("BLUEPRINT_DB_DATABASE")
+	uri         = os.Getenv("DB_URI")
+	MongoClient *mongo.Client
+	once        sync.Once
 )
 
-func New() Service {
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s", host, port)))
+func New() *mongo.Client {
+	once.Do(func() {
+		clientOptions := options.Client().ApplyURI(uri)
+		client, err := mongo.Connect(context.Background(), clientOptions)
+		if err != nil {
+			log.Fatalf("Failed to connect to MongoDB: %v", err)
+		}
 
-	if err != nil {
-		log.Fatal(err)
+		err = client.Ping(context.Background(), nil)
+		if err != nil {
+			log.Fatalf("Failed to ping MongoDB: %v", err)
+		}
 
-	}
-	return &service{
-		db: client,
-	}
-}
+		MongoClient = client
+		log.Println("Connected to MongoDB")
+	})
 
-func (s *service) Health() map[string]string {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	err := s.db.Ping(ctx, nil)
-	if err != nil {
-		log.Fatalf("db down: %v", err)
-	}
-
-	return map[string]string{
-		"message": "It's healthy",
-	}
+	return MongoClient
 }

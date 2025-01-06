@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"toeic-vocabulary/internal/server"
+	"github.com/lkphuong/toeic-vocabulary/internal/server"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {

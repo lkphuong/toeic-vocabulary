@@ -8,14 +8,14 @@ import (
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-
-	"toeic-vocabulary/internal/database"
+	"github.com/lkphuong/toeic-vocabulary/internal/database"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Server struct {
 	port int
 
-	db database.Service
+	db *mongo.Client
 }
 
 func NewServer() *http.Server {
@@ -26,7 +26,6 @@ func NewServer() *http.Server {
 		db: database.New(),
 	}
 
-	// Declare Server config
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", NewServer.port),
 		Handler:      NewServer.RegisterRoutes(),
