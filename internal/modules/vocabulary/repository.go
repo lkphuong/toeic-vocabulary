@@ -31,6 +31,30 @@ func (r *Repository) GetVocabularyPaginate(ctx context.Context, page int, limit 
 	return vocab, nil
 }
 
+func (r *Repository) GetRandomVocabulary(ctx context.Context) (*models.Vocabulary, error) {
+	var vocab models.Vocabulary
+
+	pipeline := mongo.Pipeline{
+		{{"$sample", bson.D{{"size", 1}}}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&vocab); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return &vocab, nil
+}
+
 func (r *Repository) CountVocabulary(ctx context.Context) (int64, error) {
 	totalCount, err := collection.CountDocuments(ctx, bson.M{})
 	if err != nil {

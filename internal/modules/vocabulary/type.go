@@ -1,7 +1,7 @@
 package vocabulary
 
 type PaginatedResult[T any] struct {
-	Data       []T   `json:"data"`
+	Data       any   `json:"data"`
 	TotalCount int64 `json:"total_count"`
 	Page       int   `json:"page"`
 	PageSize   int   `json:"page_size"`
