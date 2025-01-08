@@ -19,7 +19,6 @@ var (
 type Service struct{}
 
 func (s *Service) SendVocabularyToAll(ctx context.Context) {
-
 	vocab, _ := vocabulary_module.GetRandomVocabulary(ctx)
 
 	chats, err := repository.GetChatIDs(ctx)
@@ -50,9 +49,17 @@ func (s *Service) SendVocabularyToAll(ctx context.Context) {
 	}
 }
 
-func (s *Service) SendVocabularyToUser(ctx context.Context, chatID int64) {
+func (s *Service) SendVocabularyToUser(chatID int64) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	vocab, _ := vocabulary_module.GetRandomVocabulary(ctx)
+
+	if vocab == nil {
+		log.Println("Vocabulary is nil")
+		return
+	}
 
 	message := fmt.Sprintf(
 		"*Word*: `%s`\n*Type*: `%s`\n*Meaning*: %s\n\n*Examples*:\n%s\n\n*Related Words*:\n%s\n\n*Notes*:\n%s",
@@ -75,9 +82,6 @@ func (s *Service) SendVocabularyToUser(ctx context.Context, chatID int64) {
 
 func SaveChatID() {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -97,19 +101,19 @@ func SaveChatID() {
 			command := update.Message.Command()
 			switch command {
 			case "more":
-				service.SendVocabularyToUser(ctx, chatID)
+				service.SendVocabularyToUser(chatID)
 			}
 
 		}
 
-		isExist := repository.GetByChatID(ctx, chatID)
+		isExist := repository.GetByChatID(chatID)
 
 		if isExist {
 			log.Println("Chat id is existed ", chatID)
 			continue
 		}
 
-		err := repository.Save(ctx, chatID, username)
+		err := repository.Save(chatID, username)
 		if err != nil {
 			log.Println("Error while saving chat id", err)
 		}
@@ -119,20 +123,22 @@ func SaveChatID() {
 
 }
 
-// Format examples as a string
 func formatExamples(examples []models.Example) string {
 	var formatted string
 	for _, example := range examples {
-		formatted += fmt.Sprintf("• `%s`: %s\n", example.English, example.Vietnamese)
+		if example.English != "" {
+			formatted += fmt.Sprintf("• `%s`: %s\n", example.English, example.Vietnamese)
+		}
 	}
 	return formatted
 }
 
-// Format related words as a string
 func formatRelatedWords(relatedWords []models.RelatedWord) string {
 	var formatted string
 	for _, relatedWord := range relatedWords {
-		formatted += fmt.Sprintf("• `%s`: %s (%s)\n", relatedWord.Word, relatedWord.Meaning, relatedWord.Tag)
+		if relatedWord.Word != "" {
+			formatted += fmt.Sprintf("• `%s (%s)`: %s (%s)\n", relatedWord.Word, relatedWord.Type, relatedWord.Meaning, relatedWord.Tag)
+		}
 	}
 	return formatted
 }
@@ -140,7 +146,9 @@ func formatRelatedWords(relatedWords []models.RelatedWord) string {
 func formatNotes(notes []models.Note) string {
 	var formatted string
 	for _, note := range notes {
-		formatted += fmt.Sprintf("• `%s`: %s\n", note.Word, note.Note)
+		if note.Word != "" {
+			formatted += fmt.Sprintf("• `%s`: %s\n", note.Word, note.Note)
+		}
 	}
 	return formatted
 }

@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"time"
 
 	"github.com/lkphuong/toeic-vocabulary/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -29,7 +30,10 @@ func (r *Repository) GetChatIDs(ctx context.Context) ([]models.ChatID, error) {
 	return chats, nil
 }
 
-func (r *Repository) GetByChatID(ctx context.Context, chatID int64) bool {
+func (r *Repository) GetByChatID(chatID int64) bool {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	var chat *models.ChatID
 
@@ -38,7 +42,7 @@ func (r *Repository) GetByChatID(ctx context.Context, chatID int64) bool {
 	return err != mongo.ErrNoDocuments
 }
 
-func (r *Repository) Save(ctx context.Context, chatID int64, username string) error {
+func (r *Repository) Save(chatID int64, username string) error {
 
 	var chat models.ChatID
 
